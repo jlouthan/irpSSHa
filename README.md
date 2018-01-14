@@ -53,16 +53,24 @@ Source IP        Count        Reports (max 1000) SSH/BruteForce   Country
 114.143.101.2    4            24                  17               India           
 5.101.40.10      3            266                 194              Netherlands     
 113.195.145.80   3            69                  54               China
+...
 ```
+
 `Source IP`      the source of the group of suspicious unauthorized SSH requests
+
 `Count`          the number of flows from the input file that indicate unauthorized SSH requests
+
 `Reports`        the number of times the source IP has been reported to AbuseIPDB in the past 60 days. A value of 1000 likely                   indicated there are greater than 1000 reports in this time period.
+
 `SSH/BruteForce` the number of these reports that were taggged by the reporting party as SSH or Brute Force or both
+
 `Country`        the country from in which the source IP resides
+
 
 Once all suspicious IPs are identified in the table, a prompt is given to the user with the option to report any of these IPs to AbuseIPDB. Once reported, the public report will appear immediately in AbuseIPDB. Only IPs from the output table are allowed to be reported in the prompt. Example:
 
 ```
+...
 185.165.29.189   2            56                  19               Romania         
 222.186.15.40    2            38                  25               China           
 58.53.219.75     2            215                 173              China           
