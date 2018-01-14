@@ -6,14 +6,16 @@ import time
 # TODO maybe move constants to separate file?
 # Name of S3 bucket and folders to store logs and queries
 BUCKET_NAME = "IP-flow-logs-561"
+DB_NAME = "flowlogsdb"
+TABLE_NAME = "flow_logs_561"
 ROOT_LOGS_FOLDER = "logs"
-ROOT_QUERY_FOLDER = "queries"
+QUERY_LOCATION = "s3://" + BUCKET_NAME + "/queries/"
 # Number of failed ssh attempts required to identify source IP as potential attacker
 ATTEMPT_THRESHOLD = 2
 # Max number of source IPs to identify at once
 LIMIT = 100
 # Query string to run on the data to identify potential attackers
-REJECTED_SSH_QUERY = "SELECT sourceaddress, count(*) cnt FROM vpc_flow_logs \
+REJECTED_SSH_QUERY = "SELECT sourceaddress, count(*) cnt FROM " + TABLE_NAME + " \
 	WHERE action = 'REJECT' AND protocol = 6 AND destinationport = 22 \
 	GROUP BY sourceaddress HAVING count(*) >= " + str(ATTEMPT_THRESHOLD) + " \
 	ORDER BY cnt desc LIMIT " + str(LIMIT)
@@ -62,46 +64,100 @@ while True:
 		print("Bucket exists")
 		break
 
-# Upload formatted flow logs to bucket in new folder
-# s3.upload_file(filename, BUCKET_NAME, path)
-# print("Uploaded " + filename + " to bucket in " + path)
+#Upload formatted flow logs to bucket in new folder
+s3.upload_file(filename, BUCKET_NAME, path)
+print("Uploaded " + filename + " to bucket in " + path)
 
 ## Athena stuff
-print("Querying bucket for potential SSH attack...")
-## Test running a query I know will work for an existing table and database
-response = athena.start_query_execution(
-    QueryString=REJECTED_SSH_QUERY,
-    # ClientRequestToken='string',
-    QueryExecutionContext={
-        'Database': '561database'
-    },
-    ResultConfiguration={
-        'OutputLocation': "s3://" + BUCKET_NAME + "/" + ROOT_QUERY_FOLDER + "/"
-    }
-)
 
-# TODO waiters for Athena are currently being implemented in boto, until this feature is available,
-# we need to. https://github.com/boto/boto3/issues/1212
+#TODO move this function into other file (helper class)!
+# Runs Athena query for default database and returns results sychronously
+def run_query(query_string, database=None):
+	execution_context = {'Database': database}
+	# execution_context = {'Database': database} if database else {'Database': ''}
+	if database:
+		response = athena.start_query_execution(
+			QueryString=query_string,
+			QueryExecutionContext={
+				'Database': database
+			},
+			ResultConfiguration={
+				'OutputLocation': QUERY_LOCATION
+			}
+		)
+	else:
+		response = athena.start_query_execution(
+			QueryString=query_string,
+			ResultConfiguration={
+				'OutputLocation': QUERY_LOCATION
+			}
+		)
+	# TODO waiters for Athena are currently being implemented in boto, until this feature is available,
+	# we need to. https://github.com/boto/boto3/issues/1212
+	queryId = response['QueryExecutionId']
+	# TODO move the query states into constants
+	state = 'RUNNING'
 
-queryId = response['QueryExecutionId']
-# TODO move the query states into constants
-state = 'RUNNING'
+	while state == 'RUNNING':
+		response = athena.get_query_execution(
+			QueryExecutionId=queryId
+		)
+		state = response['QueryExecution']['Status']['State']
 
-while state == 'RUNNING':
-	response = athena.get_query_execution(
-		QueryExecutionId=queryId
+	if state != 'SUCCEEDED':
+		print("Error running query. Stopped execution with state " + state)
+		quit()
+
+	results = athena.get_query_results(
+    	QueryExecutionId=queryId
+    	# NextToken='string',
+    	# MaxResults=123
 	)
-	state = response['QueryExecution']['Status']['State']
+	return results
 
-if state != 'SUCCEEDED':
-	print("Error running query. Stopped execution with state " + state)
+
+run_query("CREATE DATABASE IF NOT EXISTS " + DB_NAME)
+print("Database exists")
+
+#TODO instead of dropping the existing table, should we create a new one for each time the script runs??
+run_query("DROP TABLE " + TABLE_NAME, DB_NAME)
+
+# print("Creating table in Athena db")
+location = "'s3://" + BUCKET_NAME + "/" + ROOT_LOGS_FOLDER + "/" + new_folder + "/'"
+# TODO move this constant out of this file
+# TODO regex should probably be in constants file too
+CREATE_TABLE_QUERY = "CREATE EXTERNAL TABLE IF NOT EXISTS " + TABLE_NAME + " (\
+  ts string,\
+  version int,\
+  account string,\
+  interfaceid string,\
+  sourceaddress string,\
+  destinationaddress string,\
+  sourceport int,\
+  destinationport int,\
+  protocol int,\
+  numpackets int,\
+  numbytes int,\
+  starttime string,\
+  endtime string,\
+  action string,\
+  logstatus string\
+)\
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'\
+WITH SERDEPROPERTIES\
+ ( \"input.regex\" = \"^([^ ]+)\\\\s+([0-9]+)\\\\s+([^ ]+)\\\\s+([^ ]+)\\\\s+([^ ]+)\\\\s+([^ ]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([0-9]+)\\\\s+([^ ]+)\\\\s+([^ ]+)$\" )\
+LOCATION " + location + ";"
+
+results = run_query(CREATE_TABLE_QUERY, DB_NAME)
+
+status_code = results["ResponseMetadata"]['HTTPStatusCode']
+if status_code != 200:
+	print("Table creation failed with status code " + str(status_code));
 	quit()
-
-results = athena.get_query_results(
-    QueryExecutionId=queryId
-    # NextToken='string',
-    # MaxResults=123
-)
+	
+print("Table exists")
+print("Querying table/bucket for potential SSH attack...")
+results = run_query(REJECTED_SSH_QUERY, DB_NAME)
 
 for row in results['ResultSet']['Rows']:
 	rowString = ""
