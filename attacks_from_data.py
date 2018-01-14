@@ -1,4 +1,12 @@
 import argparse
+
+# https://docs.python.org/2/library/argparse.html
+parser = argparse.ArgumentParser(description='Given a file containing formatted IP flow data, identify \
+    potential SSH attack attempts and cross-check attacker IPs with the AbuseIPDB API. Output this \
+    information in a table and allow user to formally report suspicious IPs to AbuseIPDB.')
+parser.add_argument('filename', metavar='filename', type=str, 
+    help='file containing formatted IP flow logs')
+
 import boto3
 from botocore.exceptions import ClientError
 import time
@@ -6,14 +14,10 @@ import time
 import athena_helper
 import abuseipdb_client
 
+# Constants
 # Name of S3 bucket and folders to store logs and queries
 BUCKET_NAME = "IP-flow-logs-561"
 ROOT_LOGS_FOLDER = "logs"
-
-# TODO make this output the perfect thing: https://docs.python.org/2/library/argparse.html
-parser = argparse.ArgumentParser(description='Test Script for Final Project')
-parser.add_argument('filename', metavar='filename', type=str, 
-    help='file containing formatted IP flow logs')
 
 # Parse command line argument, and create a unique name for a folder in S3 to hold the file's data
 
