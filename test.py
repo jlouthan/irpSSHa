@@ -4,6 +4,7 @@ from botocore.exceptions import ClientError
 import time
 
 import requests
+import json
 
 # TODO maybe move constants to separate file?
 # Name of S3 bucket and folders to store logs and queries
@@ -173,7 +174,7 @@ def query_abuse_ip_db(source_ip):
 			country = report["country"]
 	return num_reports, num_ssh_brute_force, country
 
-
+source_ips = []
 print("%-16s %-12s %-12s %-16s %-16s" % ("Source IP", "Count", "Reports", "SSH/BruteForce", "Country"))
 for row in results['ResultSet']['Rows'][1:]:
 	rowString = ""
@@ -181,4 +182,29 @@ for row in results['ResultSet']['Rows'][1:]:
 	# Query AbuseIPDB for number of times this ip has been reported
 	# Get total number of times reported, as well as # for brute force and ssh category tags
 	num_reports, num_ssh_brute_force, country = query_abuse_ip_db(source_ip)
+	source_ips.append(row['Data'][0]['VarCharValue'])
 	print("%-16s %-12s %-12s %-16s %-16s" % (row['Data'][0]['VarCharValue'], row['Data'][1]['VarCharValue'], str(num_reports), str(num_ssh_brute_force), country))
+
+REPORT_COMMENT = "SSH Brute Force"
+
+def report_ip(source_ip):
+	payload = {'key': API_KEY, "ip": source_ip, "comment": REPORT_COMMENT, "category": str(BRUTE_FORCE_CAT) + "," + str(SSH_CAT)}
+	res = requests.post(BASE_URL + "/report/json", params=payload)
+	print(json.dumps(res.json(), indent=4))
+
+# Provide prompts for user to optionally report IPs
+print("\n To report one of these IPs, enter report <IP>. Type quit to exit.\n");
+while True:
+	user_input = raw_input(">")
+	if user_input == "quit":
+		quit()
+	data = user_input.split()
+	if len(data) == 2 and data[0] == "report":
+		# Validate that a valid IP was passed
+		if data[1] in source_ips:
+			print("Valid input, reporting IP to AbuseIPDB...")
+			report_ip(data[1])
+		else:
+			print("Invalid IP passed.")
+	else:
+		print("\nInvalid input.\nTo report one of these IPs, enter report <IP>. Type quit to exit.\n")
