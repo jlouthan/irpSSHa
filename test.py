@@ -4,10 +4,19 @@ from botocore.exceptions import ClientError
 import time
 
 # TODO maybe move constants to separate file?
+# Name of S3 bucket and folders to store logs and queries
 BUCKET_NAME = "IP-flow-logs-561"
 ROOT_LOGS_FOLDER = "logs"
 ROOT_QUERY_FOLDER = "queries"
-REJECTED_SSH_QUERY = "SELECT sourceaddress, count(*) cnt FROM vpc_flow_logs WHERE action = 'REJECT' AND protocol = 6 AND destinationport = 22 GROUP BY sourceaddress ORDER BY cnt desc LIMIT 100"
+# Number of failed ssh attempts required to identify source IP as potential attacker
+ATTEMPT_THRESHOLD = 2
+# Max number of source IPs to identify at once
+LIMIT = 100
+# Query string to run on the data to identify potential attackers
+REJECTED_SSH_QUERY = "SELECT sourceaddress, count(*) cnt FROM vpc_flow_logs \
+	WHERE action = 'REJECT' AND protocol = 6 AND destinationport = 22 \
+	GROUP BY sourceaddress HAVING count(*) >= " + str(ATTEMPT_THRESHOLD) + " \
+	ORDER BY cnt desc LIMIT " + str(LIMIT)
 
 # TODO make this output the perfect thing: https://docs.python.org/2/library/argparse.html
 parser = argparse.ArgumentParser(description='Test Script for Final Project')
@@ -94,4 +103,10 @@ results = athena.get_query_results(
     # MaxResults=123
 )
 
-print(results)
+for row in results['ResultSet']['Rows']:
+	rowString = ""
+	for value in row['Data']:
+		rowString += value['VarCharValue']
+		rowString += "  "
+	# TODO format the printed string as needed
+	print(rowString)
