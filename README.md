@@ -24,14 +24,14 @@ It is also recommended that the code be run inside a [virtual environment](http:
 First, ensure all dependencies are installed with `pip install -r requirements.txt`
 
 
-Run `python attacks_from_data.py -h` for help and info about execution requirements.
+Run `python irpSSHa.py -h` for help and info about execution requirements.
 
 ### Output
 
 The script will print updates about bucket, database, and table creation and querying. Once the Athena and AbuseIPDB queries are finished, you will see a table identifying potential SSH attackers:
 
 ```
-(env)final-project jenniferlouthan$ python attacks_from_data.py flow-logs-example.txt 
+(env)final-project jenniferlouthan$ python irpSSHa.py flow-logs-example.txt 
 Bucket exists
 Uploaded flow-logs-example.txt to bucket in logs/uploaded-logs-1515913354/flow-logs-example.txt
 Database exists
