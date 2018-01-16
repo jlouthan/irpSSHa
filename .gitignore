@@ -2,6 +2,7 @@
 *.pyc
 __pycache__/  # Exclude the whole folder
 000000
+abuseIPDB.py
 
 # Following taken from https://github.com/github/gitignore/blob/master/Global/VirtualEnv.gitignore
 # Virtualenv

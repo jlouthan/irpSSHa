@@ -1,9 +1,10 @@
 # AbuseIPDB Client:  https://www.abuseipdb.com/api.html
 import requests
 import json
+import abuseIPDB
 
 BASE_URL = "https://www.abuseipdb.com/"
-API_KEY = "TOtnbGPgvX0VlEh4DcY7rPBGG7fV2nkcJ4LKnZXr"
+API_KEY = abuseIPDB.API_KEY
 DAYS = 60
 # List of categories codes:  https://www.abuseipdb.com/categories
 BRUTE_FORCE_CAT = 18
