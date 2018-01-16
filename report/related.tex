@@ -1,3 +1,8 @@
 \section{Related Work}
+Full featured intrusion detection systems (IDSs) such as Snort~\cite{snort} and Bro~\cite{bro} can run real time packet analysis on an end host with filters to implicate traffic in potential SSH brute force attacks. Adding the ability to run queries on traffic in real time is included in the scope of future work for irpSSHa. However, for use cases where historical traffic data from any host needs to be analyzed for attacks and reported upon, irpSSHa would be ideal over complex IDS systems running on destination hosts.
+
+The network telemetry system Sonata~\cite{sonata} offers a query interface to allow administrators performant access to traffic analytics that could feasibly be used to identify potential SSH attackers in a similar manner as irpSSHa's Athena queries. However, Sonata does not run on the end host, and a reporting mechanism would need to be added on top of Sonata to add abusive IPs to a blacklist. 
+
+Several smaller services providing intrusion prevention are perhaps the most comparable to irpSSHa in goals and functionality. These services, including tools like DenyHosts~\cite{denyhosts}, sshguard~\cite{sshguard}, and the popular Fail2Ban~\cite{fail2ban}, scan log files on the end host for signs of malicious activity and block IPs of repeat offenders. Some have configuration options for reporting attacker IPs to a system administrator. The main goals of these tools is to secure the host on which they are running; this is in contrast to irpSSHa, which aims primarily to identify abusive IPs for the purpose of sharing with reputable public blacklists.
 \label{sec:related}
 
