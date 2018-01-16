@@ -59,7 +59,7 @@ def run_query(query_string, bucket, database=None):
 def create_db(bucket):
     run_query("CREATE DATABASE IF NOT EXISTS " + DB_NAME, bucket)
 
-#TODO instead of dropping the existing table, should we create a new one for each time the script runs??
+#Instead of dropping the existing table, should we create a new one for each time the script runs??
 def create_table(data_location, bucket):
     run_query("DROP TABLE " + TABLE_NAME, bucket, DB_NAME)
 
